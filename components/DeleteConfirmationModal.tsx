@@ -13,7 +13,7 @@ const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({ isOpe
     const [countdown, setCountdown] = useState(10);
     const [isCounting, setIsCounting] = useState(false);
     const [loading, setLoading] = useState(false);
-    const timerRef = useRef<NodeJS.Timeout | null>(null);
+    const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     const PHRASE = "CONFIRMER LA SUPPRESSION";
 
