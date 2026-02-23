@@ -58,22 +58,8 @@ const Dashboard: React.FC = () => {
         fetchActions();
     }, []);
 
-    const eventTypes = useMemo(() => {
-        const types = new Set(actions.map(a => a.eventType));
-        return ['all', ...Array.from(types)];
-    }, [actions]);
-
-    const users = useMemo(() => {
-        const userMap = new Map();
-        actions.forEach(a => {
-            if (a.userId) {
-                userMap.set(a.userId, a.userName || 'Utilisateur Anonyme');
-            }
-        });
-        return Array.from(userMap.entries()).map(([id, name]) => ({ id, name }));
-    }, [actions]);
-
-    const filteredActions = useMemo(() => {
+    // Base actions filtered by Search and Date only (to calculate dynamic counts for types/users)
+    const baseActions = useMemo(() => {
         const term = searchTerm.toLowerCase();
         return actions.filter(action => {
             const matchesSearch = !term ||
@@ -84,9 +70,6 @@ const Dashboard: React.FC = () => {
                 (action.eventType || '').toLowerCase().includes(term) ||
                 JSON.stringify(action.metadata || {}).toLowerCase().includes(term);
 
-            const matchesType = typeFilter === 'all' || action.eventType === typeFilter;
-            const matchesUser = userFilter === 'all' || action.userId === userFilter;
-
             // Date filtering
             const actionDate = new Date(action.createdAt || action.timestamp || '').getTime();
             const start = startDate ? new Date(startDate).setHours(0, 0, 0, 0) : null;
@@ -94,9 +77,40 @@ const Dashboard: React.FC = () => {
 
             const matchesDate = (!start || actionDate >= start) && (!end || actionDate <= end);
 
-            return matchesSearch && matchesType && matchesUser && matchesDate;
+            return matchesSearch && matchesDate;
         });
-    }, [actions, searchTerm, typeFilter, userFilter, startDate, endDate]);
+    }, [actions, searchTerm, startDate, endDate]);
+
+    const eventTypes = useMemo(() => {
+        const counts: Record<string, number> = {};
+        baseActions.forEach(a => {
+            counts[a.eventType] = (counts[a.eventType] || 0) + 1;
+        });
+        return Object.entries(counts)
+            .map(([type, count]) => ({ type, count }))
+            .sort((a, b) => b.count - a.count);
+    }, [baseActions]);
+
+    const users = useMemo(() => {
+        const userMap = new Map<string, { name: string; count: number }>();
+        baseActions.forEach(a => {
+            if (a.userId) {
+                const existing = userMap.get(a.userId) || { name: a.userName || 'Utilisateur Anonyme', count: 0 };
+                userMap.set(a.userId, { ...existing, count: existing.count + 1 });
+            }
+        });
+        return Array.from(userMap.entries())
+            .map(([id, data]) => ({ id, ...data }))
+            .sort((a, b) => b.count - a.count);
+    }, [baseActions]);
+
+    const filteredActions = useMemo(() => {
+        return baseActions.filter(action => {
+            const matchesType = typeFilter === 'all' || action.eventType === typeFilter;
+            const matchesUser = userFilter === 'all' || action.userId === userFilter;
+            return matchesType && matchesUser;
+        });
+    }, [baseActions, typeFilter, userFilter]);
 
     const paginatedActions = useMemo(() => {
         const startIndex = (currentPage - 1) * itemsPerPage;
@@ -181,9 +195,11 @@ const Dashboard: React.FC = () => {
                                 onChange={(e) => setTypeFilter(e.target.value)}
                                 className="w-full pl-9 pr-8 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-gray-700 font-medium cursor-pointer"
                             >
-                                <option value="all">Tous les types</option>
-                                {eventTypes.filter(t => t !== 'all').map(type => (
-                                    <option key={type} value={type}>{type}</option>
+                                <option value="all">Tous les types ({baseActions.length})</option>
+                                {eventTypes.map(({ type, count }) => (
+                                    <option key={type} value={type}>
+                                        {type} ({count})
+                                    </option>
                                 ))}
                             </select>
                         </div>
@@ -195,9 +211,11 @@ const Dashboard: React.FC = () => {
                                 onChange={(e) => setUserFilter(e.target.value)}
                                 className="w-full pl-9 pr-8 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-gray-700 font-medium cursor-pointer"
                             >
-                                <option value="all">Tous les utilisateurs</option>
+                                <option value="all">Tous les utilisateurs ({baseActions.filter(a => !!a.userId).length})</option>
                                 {users.map(u => (
-                                    <option key={u.id} value={u.id}>{u.name} ({u.id.substring(0, 5)}...)</option>
+                                    <option key={u.id} value={u.id}>
+                                        {u.name} ({u.count})
+                                    </option>
                                 ))}
                             </select>
                         </div>
