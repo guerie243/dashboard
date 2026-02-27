@@ -5,6 +5,8 @@ export interface UserAction {
     userName?: string;
     ipAddress?: string;
     screenName?: string;
+    vitrineSlug?: string;
+    vitrineName?: string;
     timestamp?: string;
     createdAt?: string;
     sessionId?: string;

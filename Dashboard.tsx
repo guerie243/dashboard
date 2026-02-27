@@ -157,7 +157,7 @@ const Dashboard: React.FC = () => {
                         <h1 className="text-2xl font-bold text-gray-900">Traçabilité des Actions</h1>
                         <p className="text-gray-500">Consultez et analysez les événements utilisateurs en temps réel.</p>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-3">
                         <ExportButton
                             data={filteredActions}
                             filename={`traceability_export_${new Date().toISOString()}`}
@@ -246,7 +246,8 @@ const Dashboard: React.FC = () => {
 
                 {/* Table */}
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                    <div className="overflow-x-auto">
+                    {/* Desktop View */}
+                    <div className="hidden lg:block overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-gray-50 border-b border-gray-200">
@@ -327,9 +328,70 @@ const Dashboard: React.FC = () => {
                         </table>
                     </div>
 
+                    {/* Mobile View */}
+                    <div className="block lg:hidden divide-y divide-gray-100">
+                        {paginatedActions.length > 0 ? paginatedActions.map((action) => (
+                            <div
+                                key={`mobile-${action._id}`}
+                                className="p-4 hover:bg-gray-50 transition-colors cursor-pointer flex flex-col gap-3"
+                                onClick={() => setSelectedAction(action)}
+                            >
+                                <div className="flex justify-between items-start">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+                                            <Activity size={16} />
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-semibold text-gray-900">{action.eventType}</span>
+                                            <div className="flex items-center gap-1.5 mt-0.5">
+                                                {action.deviceInfo?.platform === 'ios' || action.deviceInfo?.platform === 'android' ? (
+                                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-indigo-50 text-indigo-600 uppercase tracking-tight border border-indigo-100">
+                                                        <Smartphone size={10} />
+                                                        Mobile
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-600 uppercase tracking-tight border border-amber-100">
+                                                        <Monitor size={10} />
+                                                        Web
+                                                    </span>
+                                                )}
+                                                {action.screenName && (
+                                                    <span className="text-[10px] text-gray-400 font-medium truncate max-w-[100px]">
+                                                        • {action.screenName}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button className="p-2 text-gray-400 hover:text-blue-600 rounded-lg transition-all">
+                                        <Eye size={18} />
+                                    </button>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2 text-xs">
+                                    <div className="flex flex-col">
+                                        <span className="text-gray-500 font-medium">Utilisateur</span>
+                                        <span className="text-gray-900 font-semibold truncate">{action.userName || 'Anonyme'}</span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-gray-500 font-medium">Date</span>
+                                        <span className="text-gray-900 font-semibold">{formatDate(action.createdAt || action.timestamp || new Date().toISOString())}</span>
+                                    </div>
+                                    <div className="flex flex-col col-span-2">
+                                        <span className="text-gray-500 font-medium">IP Address</span>
+                                        <span className="text-gray-900 font-semibold">{action.ipAddress || 'Unknown'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )) : (
+                            <div className="px-6 py-12 text-center text-gray-500 text-sm">
+                                Aucun événement trouvé correspondant à vos critères.
+                            </div>
+                        )}
+                    </div>
+
                     {/* Pagination */}
                     {totalPages > 1 && (
-                        <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
+                        <div className="px-6 py-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
                             <span className="text-sm text-gray-500">
                                 Page {currentPage} sur {totalPages}
                             </span>
